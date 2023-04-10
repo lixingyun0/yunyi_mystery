@@ -1,0 +1,45 @@
+{
+	"compiler": {
+		"version": "0.8.19+commit.7dd6d404"
+	},
+	"language": "Solidity",
+	"output": {
+		"abi": [],
+		"devdoc": {
+			"kind": "dev",
+			"methods": {},
+			"version": 1
+		},
+		"userdoc": {
+			"kind": "user",
+			"methods": {},
+			"version": 1
+		}
+	},
+	"settings": {
+		"compilationTarget": {
+			"contracts/MysteryBox.sol": "MysteryBox"
+		},
+		"evmVersion": "paris",
+		"libraries": {},
+		"metadata": {
+			"bytecodeHash": "ipfs"
+		},
+		"optimizer": {
+			"enabled": false,
+			"runs": 200
+		},
+		"remappings": []
+	},
+	"sources": {
+		"contracts/MysteryBox.sol": {
+			"keccak256": "0xa9451ddd26fa978a5097b151bd7b5b4b3cbc90a38c220185f775ad4113ef50ce",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://421f8573435939fbfe4acb35334cdda15b5204dcda7edc221a5ce8324f3f7aa0",
+				"dweb:/ipfs/QmUYaqWG45ku8wu3bLWfeuLMG5Pik4m3bmnKrv9heerMvm"
+			]
+		}
+	},
+	"version": 1
+}
