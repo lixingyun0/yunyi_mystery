@@ -46,6 +46,19 @@
 				"inputs": [
 					{
 						"internalType": "uint256",
+						"name": "boxId",
+						"type": "uint256"
+					}
+				],
+				"name": "audit",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "uint256",
 						"name": "",
 						"type": "uint256"
 					}
@@ -81,6 +94,19 @@
 				"type": "function"
 			},
 			{
+				"inputs": [
+					{
+						"internalType": "uint256",
+						"name": "requestId",
+						"type": "uint256"
+					}
+				],
+				"name": "claimed",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
 				"inputs": [],
 				"name": "currentBoxId",
 				"outputs": [
@@ -91,6 +117,24 @@
 					}
 				],
 				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "uint256",
+						"name": "_requestId",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256[]",
+						"name": "_randomWords",
+						"type": "uint256[]"
+					}
+				],
+				"name": "fulfillRandomWords",
+				"outputs": [],
+				"stateMutability": "nonpayable",
 				"type": "function"
 			},
 			{
@@ -172,6 +216,45 @@
 				"type": "function"
 			},
 			{
+				"inputs": [],
+				"name": "getRandomNumber",
+				"outputs": [
+					{
+						"internalType": "uint256",
+						"name": "random",
+						"type": "uint256"
+					}
+				],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "lastRequestId",
+				"outputs": [
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "uint256",
+						"name": "boxId",
+						"type": "uint256"
+					}
+				],
+				"name": "mint",
+				"outputs": [],
+				"stateMutability": "payable",
+				"type": "function"
+			},
+			{
 				"inputs": [
 					{
 						"internalType": "address",
@@ -210,16 +293,76 @@
 				"type": "function"
 			},
 			{
-				"inputs": [],
-				"name": "requestRandomNumber",
-				"outputs": [
+				"inputs": [
 					{
 						"internalType": "uint256",
-						"name": "random",
+						"name": "",
 						"type": "uint256"
 					}
 				],
-				"stateMutability": "nonpayable",
+				"name": "requestIds",
+				"outputs": [
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
+					}
+				],
+				"name": "requestsMapping",
+				"outputs": [
+					{
+						"internalType": "address",
+						"name": "sender",
+						"type": "address"
+					},
+					{
+						"internalType": "uint256",
+						"name": "boxId",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "randomWord",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "randomNumber",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "timestamp",
+						"type": "uint256"
+					},
+					{
+						"internalType": "bool",
+						"name": "fulfilled",
+						"type": "bool"
+					},
+					{
+						"internalType": "bool",
+						"name": "exists",
+						"type": "bool"
+					},
+					{
+						"internalType": "bool",
+						"name": "claimed",
+						"type": "bool"
+					}
+				],
+				"stateMutability": "view",
 				"type": "function"
 			}
 		],
@@ -307,11 +450,11 @@
 			]
 		},
 		"contracts/MysteryBox.sol": {
-			"keccak256": "0x0d9005610636a4a75b65d3198c7764221d7ab3db28f739543ebbedbab6ba627a",
+			"keccak256": "0x0396d3e296a6a7109592dd3e4bd9db209d41b8c54de7c2ef4c2266b462037eda",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://5014a31377390946e28ecf039d2dd86edcf98cd7c790e958cd956213d114ff9d",
-				"dweb:/ipfs/QmVLYxxNXLGcbAbrVsybuerkndKWxV8ncx9cbaP4ivAUio"
+				"bzz-raw://7f67df9cfb8a0d68b26760963d7e6e5619310bd57faafddeeca6e625b9355a6c",
+				"dweb:/ipfs/QmafvioPwoi2pESdesqCrZrUsjVfotFcY76t5KHErgUguq"
 			]
 		}
 	},
