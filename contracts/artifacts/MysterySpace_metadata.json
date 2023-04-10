@@ -45,6 +45,116 @@
 			{
 				"inputs": [
 					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
+					}
+				],
+				"name": "boxIds",
+				"outputs": [
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
+					}
+				],
+				"name": "checkedBoxIds",
+				"outputs": [
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "currentBoxId",
+				"outputs": [
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "uint256",
+						"name": "boxId",
+						"type": "uint256"
+					}
+				],
+				"name": "getBoxDetail",
+				"outputs": [
+					{
+						"internalType": "address",
+						"name": "coin",
+						"type": "address"
+					},
+					{
+						"internalType": "uint256",
+						"name": "price",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "totalSupply",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "stocks",
+						"type": "uint256"
+					},
+					{
+						"internalType": "bool",
+						"name": "checked",
+						"type": "bool"
+					},
+					{
+						"internalType": "uint256[]",
+						"name": "probabilityArray",
+						"type": "uint256[]"
+					},
+					{
+						"internalType": "uint256[]",
+						"name": "rangeArray",
+						"type": "uint256[]"
+					},
+					{
+						"internalType": "address[]",
+						"name": "tokenArray",
+						"type": "address[]"
+					},
+					{
+						"internalType": "uint256[]",
+						"name": "rewardAmountArray",
+						"type": "uint256[]"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
 						"internalType": "bool",
 						"name": "checked",
 						"type": "bool"
@@ -80,7 +190,7 @@
 					},
 					{
 						"internalType": "uint256[]",
-						"name": "range",
+						"name": "probabilityArray",
 						"type": "uint256[]"
 					},
 					{
@@ -90,7 +200,7 @@
 					},
 					{
 						"internalType": "uint256[]",
-						"name": "amountArray",
+						"name": "rewardAmountArray",
 						"type": "uint256[]"
 					}
 				],
@@ -197,11 +307,11 @@
 			]
 		},
 		"contracts/MysteryBox.sol": {
-			"keccak256": "0xb7045084efade2008f661fd4ee9b5fb9df3ac76828725af57aa84fb7ef9244e4",
+			"keccak256": "0x0d9005610636a4a75b65d3198c7764221d7ab3db28f739543ebbedbab6ba627a",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://d48fb342d2456adc6d1c43db26b6f7ea45f32969d15260c34ef01dfb020009a8",
-				"dweb:/ipfs/QmRXD121rwpsVaze5e7gvBHDb7itAHQDX4q5z3fyx1AQQR"
+				"bzz-raw://5014a31377390946e28ecf039d2dd86edcf98cd7c790e958cd956213d114ff9d",
+				"dweb:/ipfs/QmVLYxxNXLGcbAbrVsybuerkndKWxV8ncx9cbaP4ivAUio"
 			]
 		}
 	},
