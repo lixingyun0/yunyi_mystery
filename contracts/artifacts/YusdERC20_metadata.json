@@ -333,10 +333,10 @@
 			]
 		},
 		"contracts/YUSDERC20.sol": {
-			"keccak256": "0x372beb886f92797d80f64546a963ff9707779d1037829f73c73d1ecc943061d0",
+			"keccak256": "0xe079b67959ece8f5ebe2b4399d1bf2c7e66475757975a1ef31eb183bd1a7aac8",
 			"urls": [
-				"bzz-raw://22d44718bb6a2cddaa2f851af8a8a28ca4560f3f236c322d707bcce66ee24d2d",
-				"dweb:/ipfs/QmcGt8gG9CckRGN1rZfxCdMGAyb5FJ2SkqcMd5jn1G6KEk"
+				"bzz-raw://26a09ee46f13d800b2f33522e5e712b4135336696ef34a03bb2b33ab79113223",
+				"dweb:/ipfs/QmXs4PMatiFPGwNPxFgiDJCkbP3szBMa58BS6dMXKN4aJ3"
 			]
 		}
 	},

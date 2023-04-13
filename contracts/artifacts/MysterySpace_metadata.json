@@ -6,6 +6,17 @@
 	"output": {
 		"abi": [
 			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "token",
+						"type": "address"
+					}
+				],
+				"name": "InsufficientTokenValue",
+				"type": "error"
+			},
+			{
 				"anonymous": false,
 				"inputs": [
 					{
@@ -107,6 +118,19 @@
 				"type": "function"
 			},
 			{
+				"inputs": [
+					{
+						"internalType": "uint256",
+						"name": "boxId",
+						"type": "uint256"
+					}
+				],
+				"name": "claimedMysteryIncome",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
 				"inputs": [],
 				"name": "currentBoxId",
 				"outputs": [
@@ -117,6 +141,29 @@
 					}
 				],
 				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "uint256",
+						"name": "boxId",
+						"type": "uint256"
+					},
+					{
+						"internalType": "address[]",
+						"name": "_tokenArray",
+						"type": "address[]"
+					},
+					{
+						"internalType": "uint256[]",
+						"name": "_amountArray",
+						"type": "uint256[]"
+					}
+				],
+				"name": "deposit",
+				"outputs": [],
+				"stateMutability": "payable",
 				"type": "function"
 			},
 			{
@@ -229,19 +276,6 @@
 				"type": "function"
 			},
 			{
-				"inputs": [],
-				"name": "lastRequestId",
-				"outputs": [
-					{
-						"internalType": "uint256",
-						"name": "",
-						"type": "uint256"
-					}
-				],
-				"stateMutability": "view",
-				"type": "function"
-			},
-			{
 				"inputs": [
 					{
 						"internalType": "uint256",
@@ -347,6 +381,16 @@
 						"type": "uint256"
 					},
 					{
+						"internalType": "address",
+						"name": "rewardToken",
+						"type": "address"
+					},
+					{
+						"internalType": "uint256",
+						"name": "rewardAmount",
+						"type": "uint256"
+					},
+					{
 						"internalType": "bool",
 						"name": "fulfilled",
 						"type": "bool"
@@ -364,6 +408,19 @@
 				],
 				"stateMutability": "view",
 				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "uint256",
+						"name": "boxId",
+						"type": "uint256"
+					}
+				],
+				"name": "stopSaleMystery",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
 			}
 		],
 		"devdoc": {
@@ -379,7 +436,7 @@
 	},
 	"settings": {
 		"compilationTarget": {
-			"contracts/MysteryBox.sol": "MysterySpace"
+			"contracts/MysterySpaceChainLink.sol": "MysterySpace"
 		},
 		"evmVersion": "paris",
 		"libraries": {},
@@ -449,12 +506,12 @@
 				"dweb:/ipfs/QmRK2Y5Yc6BK7tGKkgsgn3aJEQGi5aakeSPZvS65PV8Xp3"
 			]
 		},
-		"contracts/MysteryBox.sol": {
-			"keccak256": "0x0396d3e296a6a7109592dd3e4bd9db209d41b8c54de7c2ef4c2266b462037eda",
+		"contracts/MysterySpaceChainLink.sol": {
+			"keccak256": "0xa1f87c05f01f7bd6a212c1d3630869540d35d242d89769757b7b65698a6ceb28",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://7f67df9cfb8a0d68b26760963d7e6e5619310bd57faafddeeca6e625b9355a6c",
-				"dweb:/ipfs/QmafvioPwoi2pESdesqCrZrUsjVfotFcY76t5KHErgUguq"
+				"bzz-raw://4fa2b496aba605bc1f93a88545acb6d60cfd411669b1cf4cefbd3c6465e4b4f2",
+				"dweb:/ipfs/QmSCh3QjsKr31iu2DCFDYExh6dx5FzaQZfBhCSPd5SCD53"
 			]
 		}
 	},

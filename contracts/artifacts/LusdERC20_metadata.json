@@ -333,10 +333,10 @@
 			]
 		},
 		"contracts/LUSDERC20.sol": {
-			"keccak256": "0x443d169c5aaeaf0c69ad0eac85325f2b7c93d2faca67e4298af2b81ccec85dde",
+			"keccak256": "0xdde1928b8a0fd81193c25181f855703b904db6420ad3cf2f4a7f30ba180b25ed",
 			"urls": [
-				"bzz-raw://2a2174191dd2e8e0a3f1e7760c1140c0c130d40b5e6a19d8c3f6d8cceab8e5f9",
-				"dweb:/ipfs/QmTSYQWqxZWFrPekJKGyR5zzDynMt6JfCa2mjmrdghnx2w"
+				"bzz-raw://c4f3b91cf8759329b9efdd9ac389b0a9f07a446a003661e4d9e514893ee6d857",
+				"dweb:/ipfs/QmZBL7GZp4VMpkuH7g5cZooeJ37R9pEHV2bJHXVbieYkLj"
 			]
 		}
 	},

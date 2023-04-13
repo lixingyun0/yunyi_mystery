@@ -22,7 +22,7 @@ contract XusdERC20 is ERC20Token {
         name = 'YunYiUSD';
         symbol = 'XUSD';
         decimals = 6;
-        _totalSupply = 1000000000000;
-        balances[msg.sender] = 1000000000000;
+        _totalSupply = 100000000000000;
+        balances[msg.sender] = 100000000000000;
     }
 }

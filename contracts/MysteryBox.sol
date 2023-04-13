@@ -14,6 +14,8 @@ contract MysterySpace {
     uint256[] public boxIds;
     uint256[] public checkedBoxIds;
     uint256 public currentBoxId;
+    mapping(uint256 => mapping(address => uint256)) boxAccount;
+    mapping(uint256 => mapping(address => uint256)) boxRewardAmountMapping;
 
     struct RequestStatus {
         address sender;
@@ -21,16 +23,17 @@ contract MysterySpace {
         uint256 randomWord;
         uint256 randomNumber;
         uint256 timestamp;
+        address rewardToken;
+        uint256 rewardAmount;
         bool fulfilled; // whether the request has been successfully fulfilled
         bool exists; // whether a requestId exists
         bool claimed; // whether reward claimed
     }
-    mapping(uint256 => RequestStatus)
-        public requestsMapping; 
+    mapping(uint256 => RequestStatus) public requestsMapping;
 
-    // past requests Id.
     uint256[] public requestIds;
-    uint256 public lastRequestId;
+
+    error InsufficientTokenValue(address token);
 
     event Log(
         address sender,
@@ -46,8 +49,11 @@ contract MysterySpace {
         uint256 price;
         uint256 totalSupply;
         uint256 stocks;
+        uint256 income;
         address owner;
+        bool frozen;
         bool checked;
+        bool stop;
     }
 
     struct MysteryReward {
@@ -109,31 +115,48 @@ contract MysterySpace {
         );
         uint256 totalProbability;
         for (uint256 i = 0; i < probabilityArray.length; i++) {
-            if (i<probabilityArray.length-1){
-                require(probabilityArray[i]<probabilityArray[i+1],"Sort from smallest to largest");
+            if (i < probabilityArray.length - 1) {
+                require(
+                    probabilityArray[i] < probabilityArray[i + 1],
+                    "Sort from smallest to largest"
+                );
             }
             totalProbability = totalProbability + probabilityArray[i];
         }
         require(totalProbability == 10000, "incorrect probability");
 
         for (uint256 i = 0; i < tokenArray.length; i++) {
-            uint256 value = (probabilityArray[i] * totalSupply * rewardAmountArray[i]) / 10000;
+            uint256 value = (probabilityArray[i] *
+                totalSupply *
+                rewardAmountArray[i]) / 10000;
             if (tokenArray[i] == address(0)) {
                 require(msg.value >= value, "insufficient coin value");
             } else {
-                IERC20(tokenArray[i]).safeTransferFrom(msg.sender,address(this),value);
+                IERC20(tokenArray[i]).safeTransferFrom(
+                    msg.sender,
+                    address(this),
+                    value
+                );
             }
+            boxAccount[currentBoxId][tokenArray[i]] = value;
+            boxRewardAmountMapping[currentBoxId][
+                tokenArray[i]
+            ] = rewardAmountArray[i];
         }
 
-        mysteryMapping[currentBoxId] = Mystery(
-            currentBoxId,
-            coin,
-            price,
-            totalSupply,
-            totalSupply,
-            msg.sender,
-            false
-        );
+        mysteryMapping[currentBoxId] = Mystery({
+            boxId: currentBoxId,
+            coin: coin,
+            price: price,
+            totalSupply: totalSupply,
+            stocks: totalSupply,
+            owner: msg.sender,
+            income: 0,
+            checked: false,
+            frozen: false,
+            stop: false
+        });
+
         MysteryReward storage mysteryReward = mysteryReWardMapping[
             currentBoxId
         ];
@@ -156,31 +179,116 @@ contract MysterySpace {
         currentBoxId++;
     }
 
-    function audit(uint boxId) external {
+    function deposit(
+        uint256 boxId,
+        address[] memory _tokenArray,
+        uint256[] memory _amountArray
+    ) external payable {
+        require(_tokenArray.length > 0, "At least one token address");
+        require(
+            _tokenArray.length == _amountArray.length,
+            "Incorrect parameter"
+        );
+        MysteryReward memory mysteryReward = mysteryReWardMapping[boxId];
+
+        mapping(address => uint256)
+            storage tokenRewardMapping = boxRewardAmountMapping[boxId];
+
+        for (uint256 i = 0; i < _tokenArray.length; i++) {
+            address token = _tokenArray[i];
+            uint256 amount = _amountArray[i];
+
+            if (token == address(0)) {
+                require(msg.value >= amount, "insufficient coin value");
+            } else {
+                IERC20(token).safeTransferFrom(
+                    msg.sender,
+                    address(this),
+                    amount
+                );
+            }
+            boxAccount[boxId][token] = boxAccount[boxId][token] + amount;
+        }
+        address[] memory tokenArray = mysteryReward.tokenArray;
+        uint256[] memory rewardAmountArray = mysteryReward.rewardAmountArray;
+        bool frozen = false;
+        for (uint256 i = 0; i < tokenArray.length; i++) {
+            address token = tokenArray[i];
+            uint256 amount = rewardAmountArray[i];
+            if (tokenRewardMapping[token] < amount) {
+                frozen = true;
+                break;
+            }
+        }
+        if (!frozen) {
+            mysteryMapping[boxId].frozen = false;
+        }
+    }
+
+    function stopSaleMystery(uint256 boxId) external {
         Mystery storage mystery = mysteryMapping[boxId];
-        require(boxId == mystery.boxId,"incorrect box id");
-        require(!mystery.checked,"Mystery box already checked");
+        require(mystery.owner == msg.sender, "Not mystery owner");
+        mystery.stop = true;
+        MysteryReward memory mysteryReward = mysteryReWardMapping[boxId];
+        address[] memory tokenArray = mysteryReward.tokenArray;
+        mapping(address => uint256) storage _account = boxAccount[boxId];
+        for (uint256 i = 0; i < tokenArray.length; i++) {
+            uint256 _amount = _account[tokenArray[i]];
+            if (_amount > 0) {
+                _account[tokenArray[i]] = 0;
+                if (tokenArray[i] == address(0)) {
+                    payable(msg.sender).sendValue(_amount);
+                } else {
+                    IERC20(tokenArray[i]).safeTransfer(msg.sender, _amount);
+                }
+            }
+        }
+    }
+
+    function claimedMysteryIncome(uint256 boxId) external {
+        Mystery storage mystery = mysteryMapping[boxId];
+        require(mystery.owner == msg.sender, "Not mystery owner");
+        uint256 _income = mystery.income;
+        if (_income > 0) {
+            mystery.income = 0;
+            if (mystery.coin == address(0)) {
+                payable(msg.sender).sendValue(_income);
+            } else {
+                IERC20(mystery.coin).safeTransfer(msg.sender, _income);
+            }
+        }
+    }
+
+    function audit(uint256 boxId) external {
+        Mystery storage mystery = mysteryMapping[boxId];
+        require(boxId == mystery.boxId, "incorrect box id");
+        require(!mystery.checked, "Mystery box already checked");
         mystery.checked = true;
     }
 
-    function mint(uint boxId) external payable{
+    function mint(uint256 boxId) external payable {
         Mystery memory mystery = mysteryMapping[boxId];
-        require(mystery.checked,"Mystery has not passed the review");
-        require(mystery.stocks > 0,"Insufficient stocks");
+        require(mystery.checked, "Mystery has not passed the review");
+        require(mystery.stocks > 0, "Insufficient stocks");
 
-        if (mystery.coin == address(0)){
+        if (mystery.coin == address(0)) {
             require(msg.value >= mystery.price, "Insufficient coin value");
-        }else{
-            IERC20(mystery.coin).safeTransferFrom(msg.sender,address(this),mystery.price);
+        } else {
+            IERC20(mystery.coin).safeTransferFrom(
+                msg.sender,
+                address(this),
+                mystery.price
+            );
         }
+        mystery.stocks--;
+        mystery.income = mystery.income + mystery.price;
         requestRandomWords(boxId);
     }
 
-    function requestRandomWords(uint boxId)
+    function requestRandomWords(uint256 boxId)
         internal
         returns (uint256 requestId)
     {
-        
         requestId = block.timestamp;
         requestsMapping[requestId] = RequestStatus({
             sender: msg.sender,
@@ -189,43 +297,80 @@ contract MysterySpace {
             randomNumber: 0xfffff,
             timestamp: 0,
             exists: true,
+            rewardToken: address(1),
+            rewardAmount: 0,
             fulfilled: false,
             claimed: false
         });
         requestIds.push(requestId);
-        lastRequestId = requestId;
     }
 
     function fulfillRandomWords(
         uint256 _requestId,
         uint256[] memory _randomWords
-    ) public  {
+    ) public {
         require(requestsMapping[_requestId].exists, "request not found");
         RequestStatus storage requestStatus = requestsMapping[_requestId];
         requestStatus.fulfilled = true;
         requestStatus.randomWord = _randomWords[0];
         requestStatus.timestamp = block.timestamp;
-        requestStatus.randomNumber = uint256(keccak256(abi.encodePacked(requestStatus.sender, requestStatus.timestamp,requestStatus.randomWord)) >> 236);
-    }
+        requestStatus.randomNumber = uint256(
+            keccak256(
+                abi.encodePacked(
+                    requestStatus.sender,
+                    requestStatus.timestamp,
+                    requestStatus.randomWord
+                )
+            ) >> 236
+        );
 
-    function claimed(uint requestId) external {
-        RequestStatus storage requestStatus = requestsMapping[requestId];
-        requestStatus.claimed = true;
-        uint randomNumber = requestStatus.randomNumber;
-        MysteryReward memory mysteryReward = mysteryReWardMapping[requestStatus.boxId];
-        for (uint i = 0;i<mysteryReward.rangeArray.length;i++){
-            if (randomNumber < mysteryReward.rangeArray[i]){
+        MysteryReward memory mysteryReward = mysteryReWardMapping[
+            requestStatus.boxId
+        ];
+        for (uint256 i = 0; i < mysteryReward.rangeArray.length; i++) {
+            if (requestStatus.randomNumber < mysteryReward.rangeArray[i]) {
                 address token = mysteryReward.tokenArray[i];
-                if (token == address(0)){
-                    payable(msg.sender).sendValue(mysteryReward.rewardAmountArray[i]);
-                }else {
-                    IERC20(token).safeTransferFrom(address(this),msg.sender,mysteryReward.rewardAmountArray[i]);
+                uint256 rewardAmount = mysteryReward.rewardAmountArray[i];
+                if (token == address(0)) {
+                    payable(msg.sender).sendValue(rewardAmount);
+                } else {
+                    IERC20(token).safeTransferFrom(
+                        address(this),
+                        msg.sender,
+                        rewardAmount
+                    );
+                }
+                requestStatus.rewardToken = token;
+                requestStatus.rewardAmount = rewardAmount;
+
+                uint256 tokenBalance = boxAccount[requestStatus.boxId][token] -
+                    rewardAmount;
+                boxAccount[requestStatus.boxId][token] = tokenBalance;
+                if (tokenBalance < mysteryReward.rewardAmountArray[i]) {
+                    Mystery storage mystery = mysteryMapping[
+                        requestStatus.boxId
+                    ];
+                    mystery.frozen = true;
                 }
                 return;
             }
         }
+    }
 
-    } 
+    function claimed(uint256 requestId) external {
+        RequestStatus storage requestStatus = requestsMapping[requestId];
+        requestStatus.claimed = true;
+
+        if (requestStatus.rewardToken == address(0)) {
+            payable(msg.sender).sendValue(requestStatus.rewardAmount);
+        } else {
+            IERC20(requestStatus.rewardToken).safeTransferFrom(
+                address(this),
+                msg.sender,
+                requestStatus.rewardAmount
+            );
+        }
+    }
 
     function getRandomNumber() public returns (uint256 random) {
         address sender = msg.sender;
