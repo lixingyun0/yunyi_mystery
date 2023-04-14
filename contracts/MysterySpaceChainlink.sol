@@ -2,13 +2,16 @@
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol";
 import "@chainlink/contracts/src/v0.8/VRFConsumerBaseV2.sol";
 import "@chainlink/contracts/src/v0.8/ConfirmedOwner.sol";
 
-pragma solidity ^0.8.0;
 
-contract MysterySpaceChainlink is VRFConsumerBaseV2, ConfirmedOwner {
+pragma solidity 0.8.16;
+
+contract MysterySpaceChainlink is VRFConsumerBaseV2, ConfirmedOwner, ReentrancyGuard {
     using SafeERC20 for IERC20;
     using Address for address payable;
 
@@ -61,13 +64,27 @@ contract MysterySpaceChainlink is VRFConsumerBaseV2, ConfirmedOwner {
 
     error InsufficientTokenValue(address token);
 
-    event Log(
-        address sender,
-        uint256 time,
-        bytes32 a,
-        bytes32 b,
-        uint256 random
-    );
+    event PublishMystery(uint boxId);
+
+    event Mint(uint requestId);
+    
+    event Claim(uint requestId);
+
+    event Deposit(uint boxId);
+
+    event StopSale(uint boxId);
+
+    event PushLisherClaim(uint boxId);
+
+    event Audit(uint boxId);
+
+    event Freeze(uint boxId);
+
+    event UnFreeze(uint boxId);
+
+    event RequestSent(uint256 boxId, uint256 requestId);
+    event RequestFulfilled(uint256 requestId, uint256 randomWord);
+
 
     struct Mystery {
         uint256 boxId;
@@ -202,7 +219,9 @@ contract MysterySpaceChainlink is VRFConsumerBaseV2, ConfirmedOwner {
         mysteryReward.rewardAmountArray = rewardAmountArray;
 
         boxIds.push(currentBoxId);
+        emit PublishMystery(currentBoxId);
         currentBoxId++;
+
     }
 
     function deposit(
@@ -248,10 +267,12 @@ contract MysterySpaceChainlink is VRFConsumerBaseV2, ConfirmedOwner {
         }
         if (!frozen) {
             mysteryMapping[boxId].frozen = false;
+            emit UnFreeze(boxId);
         }
+        emit Deposit(boxId);
     }
 
-    function stopSaleMystery(uint256 boxId) external {
+    function stopSaleMystery(uint256 boxId) external nonReentrant {
         Mystery storage mystery = mysteryMapping[boxId];
         require(mystery.owner == msg.sender, "Not mystery owner");
         mystery.stop = true;
@@ -269,9 +290,10 @@ contract MysterySpaceChainlink is VRFConsumerBaseV2, ConfirmedOwner {
                 }
             }
         }
+        emit StopSale(boxId);
     }
 
-    function claimedMysteryIncome(uint256 boxId) external {
+    function claimedMysteryIncome(uint256 boxId) external nonReentrant {
         Mystery storage mystery = mysteryMapping[boxId];
         require(mystery.owner == msg.sender, "Not mystery owner");
         uint256 _income = mystery.income;
@@ -283,20 +305,25 @@ contract MysterySpaceChainlink is VRFConsumerBaseV2, ConfirmedOwner {
                 IERC20(mystery.coin).safeTransfer(msg.sender, _income);
             }
         }
+        emit PushLisherClaim(boxId);
     }
 
-    function audit(uint256 boxId) external {
+    function audit(uint256 boxId) external onlyOwner{
         Mystery storage mystery = mysteryMapping[boxId];
         require(boxId == mystery.boxId, "incorrect box id");
         require(!mystery.checked, "Mystery box already checked");
         mystery.checked = true;
+        emit Audit(boxId);
     }
 
     function mint(uint256 boxId) external payable {
         Mystery memory mystery = mysteryMapping[boxId];
         require(mystery.checked, "Mystery has not passed the review");
         require(mystery.stocks > 0, "Insufficient stocks");
+        require(!mystery.frozen, "Insufficient reward");
+        require(!mystery.stop, "Stop sale");
 
+        mystery.stocks--;
         if (mystery.coin == address(0)) {
             require(msg.value >= mystery.price, "Insufficient coin value");
         } else {
@@ -306,9 +333,10 @@ contract MysterySpaceChainlink is VRFConsumerBaseV2, ConfirmedOwner {
                 mystery.price
             );
         }
-        mystery.stocks--;
+        
         mystery.income = mystery.income + mystery.price;
         requestRandomWords(boxId);
+        emit Mint(boxId);
     }
 
     function requestRandomWords(uint256 boxId)
@@ -335,6 +363,7 @@ contract MysterySpaceChainlink is VRFConsumerBaseV2, ConfirmedOwner {
             claimed: false
         });
         requestIds.push(requestId);
+        emit RequestSent(boxId, requestId);
     }
 
     function fulfillRandomWords(
@@ -342,6 +371,8 @@ contract MysterySpaceChainlink is VRFConsumerBaseV2, ConfirmedOwner {
         uint256[] memory _randomWords
     ) internal override{
         require(requestsMapping[_requestId].exists, "request not found");
+        emit RequestFulfilled(_requestId, _randomWords[0]);
+
         RequestStatus storage requestStatus = requestsMapping[_requestId];
         requestStatus.fulfilled = true;
         requestStatus.randomWord = _randomWords[0];
@@ -389,10 +420,13 @@ contract MysterySpaceChainlink is VRFConsumerBaseV2, ConfirmedOwner {
         }
     }
 
-    function claimed(uint256 requestId) external {
+    function claimed(uint256 requestId) external nonReentrant {
         RequestStatus storage requestStatus = requestsMapping[requestId];
+        require(requestStatus.fulfilled,"Wait chainlink fullfill random words");
+        require(!requestStatus.claimed,"Reward claimed");
+        require(requestStatus.sender == msg.sender,"Only callable by request sender");
         requestStatus.claimed = true;
-
+        
         if (requestStatus.rewardToken == address(0)) {
             payable(msg.sender).sendValue(requestStatus.rewardAmount);
         } else {
@@ -404,14 +438,6 @@ contract MysterySpaceChainlink is VRFConsumerBaseV2, ConfirmedOwner {
         }
     }
 
-    function getRandomNumber() public returns (uint256 random) {
-        address sender = msg.sender;
-        uint256 time = block.timestamp;
-        bytes32 randomBytes1 = keccak256(abi.encodePacked(time, sender));
-        bytes32 randomBytes2 = randomBytes1 >> 236;
-        random = uint256(randomBytes2);
-        emit Log(sender, time, randomBytes1, randomBytes2, random);
-    }
 
     function getMysteryAmount(bool checked)
         public
