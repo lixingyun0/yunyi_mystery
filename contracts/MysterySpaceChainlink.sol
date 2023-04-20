@@ -9,7 +9,7 @@ import "@chainlink/contracts/src/v0.8/VRFConsumerBaseV2.sol";
 import "@chainlink/contracts/src/v0.8/ConfirmedOwner.sol";
 
 
-pragma solidity 0.8.16;
+pragma solidity 0.8.18;
 
 contract MysterySpaceChainlink is VRFConsumerBaseV2, ConfirmedOwner, ReentrancyGuard {
     using SafeERC20 for IERC20;
@@ -27,7 +27,7 @@ contract MysterySpaceChainlink is VRFConsumerBaseV2, ConfirmedOwner, ReentrancyG
     VRFCoordinatorV2Interface COORDINATOR;
     uint64 chainlink_subscription_id;
     bytes32 chainlink_key_hash = 0x474e34a077df58807dbe9c96d3c009b23b3c6d0cce433e59bbf5b34f823bc56c;
-    uint32 chainlink_callback_gas_limit = 100000;
+    uint32 chainlink_callback_gas_limit = 300000;
     uint16 chainlink_request_confirmations = 3;
     uint32 chaink_num_words = 1;
 
@@ -66,7 +66,7 @@ contract MysterySpaceChainlink is VRFConsumerBaseV2, ConfirmedOwner, ReentrancyG
 
     event PublishMystery(uint boxId);
 
-    event Mint(uint requestId);
+    event Mint(uint boxId);
     
     event Claim(uint requestId);
 
@@ -106,7 +106,23 @@ contract MysterySpaceChainlink is VRFConsumerBaseV2, ConfirmedOwner, ReentrancyG
         uint256[] rewardAmountArray;
     }
 
-    function getBoxDetail(uint256 boxId)
+    function getMysteryAmount(bool checked)
+        public
+        view
+        returns (uint256 amount)
+    {
+        if (checked) {
+            amount = checkedBoxIds.length;
+        } else {
+            amount = boxIds.length;
+        }
+    }
+
+    function getBoxAccountInfo(uint256 boxId,address token) external view returns (uint256){
+        return boxAccount[boxId][token];
+    }
+
+    function getBoxInfo(uint256 _boxId)
         public
         view
         returns (
@@ -114,20 +130,36 @@ contract MysterySpaceChainlink is VRFConsumerBaseV2, ConfirmedOwner, ReentrancyG
             uint256 price,
             uint256 totalSupply,
             uint256 stocks,
+            uint256 income,
+            address owner,
+            bool frozen,
             bool checked,
+            bool stop
+        )
+    {
+        Mystery memory mystery = mysteryMapping[_boxId];
+        coin = mystery.coin;
+        price = mystery.price;
+        totalSupply = mystery.totalSupply;
+        stocks = mystery.stocks;
+        income = mystery.income;
+        owner = mystery.owner;
+        frozen = mystery.frozen;
+        checked = mystery.checked;
+        stop = mystery.stop;
+        
+    }
+
+    function getBoxRewardInfo(uint256 boxId)
+        public
+        view
+        returns (
             uint256[] memory probabilityArray,
             uint256[] memory rangeArray,
             address[] memory tokenArray,
             uint256[] memory rewardAmountArray
         )
     {
-        Mystery memory mystery = mysteryMapping[boxId];
-        coin = mystery.coin;
-        price = mystery.price;
-        totalSupply = mystery.totalSupply;
-        stocks = mystery.stocks;
-        checked = mystery.checked;
-
         MysteryReward memory mysteryReward = mysteryReWardMapping[boxId];
         probabilityArray = mysteryReward.probabilityArray;
         rangeArray = mysteryReward.rangeArray;
@@ -160,7 +192,7 @@ contract MysterySpaceChainlink is VRFConsumerBaseV2, ConfirmedOwner, ReentrancyG
         for (uint256 i = 0; i < probabilityArray.length; i++) {
             if (i < probabilityArray.length - 1) {
                 require(
-                    probabilityArray[i] < probabilityArray[i + 1],
+                    probabilityArray[i] <= probabilityArray[i + 1],
                     "Sort from smallest to largest"
                 );
             }
@@ -236,9 +268,6 @@ contract MysterySpaceChainlink is VRFConsumerBaseV2, ConfirmedOwner, ReentrancyG
         );
         MysteryReward memory mysteryReward = mysteryReWardMapping[boxId];
 
-        mapping(address => uint256)
-            storage tokenRewardMapping = boxRewardAmountMapping[boxId];
-
         for (uint256 i = 0; i < _tokenArray.length; i++) {
             address token = _tokenArray[i];
             uint256 amount = _amountArray[i];
@@ -256,11 +285,13 @@ contract MysterySpaceChainlink is VRFConsumerBaseV2, ConfirmedOwner, ReentrancyG
         }
         address[] memory tokenArray = mysteryReward.tokenArray;
         uint256[] memory rewardAmountArray = mysteryReward.rewardAmountArray;
+
+        mapping(address => uint256) storage boxAccountMapping = boxAccount[boxId];
         bool frozen = false;
         for (uint256 i = 0; i < tokenArray.length; i++) {
             address token = tokenArray[i];
             uint256 amount = rewardAmountArray[i];
-            if (tokenRewardMapping[token] < amount) {
+            if (boxAccountMapping[token] < amount) {
                 frozen = true;
                 break;
             }
@@ -313,11 +344,14 @@ contract MysterySpaceChainlink is VRFConsumerBaseV2, ConfirmedOwner, ReentrancyG
         require(boxId == mystery.boxId, "incorrect box id");
         require(!mystery.checked, "Mystery box already checked");
         mystery.checked = true;
+        checkedBoxIds.push(boxId);
         emit Audit(boxId);
     }
 
+    //=============================================================
+
     function mint(uint256 boxId) external payable {
-        Mystery memory mystery = mysteryMapping[boxId];
+        Mystery storage mystery = mysteryMapping[boxId];
         require(mystery.checked, "Mystery has not passed the review");
         require(mystery.stocks > 0, "Insufficient stocks");
         require(!mystery.frozen, "Insufficient reward");
@@ -337,6 +371,23 @@ contract MysterySpaceChainlink is VRFConsumerBaseV2, ConfirmedOwner, ReentrancyG
         mystery.income = mystery.income + mystery.price;
         requestRandomWords(boxId);
         emit Mint(boxId);
+    }
+
+    function claimed(uint256 requestId) external nonReentrant {
+        RequestStatus storage requestStatus = requestsMapping[requestId];
+        require(requestStatus.fulfilled,"Wait chainlink fullfill random words");
+        require(!requestStatus.claimed,"Reward claimed");
+        require(requestStatus.sender == msg.sender,"Only callable by request sender");
+        requestStatus.claimed = true;
+        
+        if (requestStatus.rewardToken == address(0)) {
+            payable(msg.sender).sendValue(requestStatus.rewardAmount);
+        } else {
+            IERC20(requestStatus.rewardToken).safeTransfer(
+                msg.sender,
+                requestStatus.rewardAmount
+            );
+        }
     }
 
     function requestRandomWords(uint256 boxId)
@@ -364,6 +415,14 @@ contract MysterySpaceChainlink is VRFConsumerBaseV2, ConfirmedOwner, ReentrancyG
         });
         requestIds.push(requestId);
         emit RequestSent(boxId, requestId);
+    }
+
+    function getRandomNumber() public view returns (uint256 random) {
+        address sender = msg.sender;
+        uint256 time = block.timestamp;
+        bytes32 randomBytes1 = keccak256(abi.encodePacked(time, sender));
+        bytes32 randomBytes2 = randomBytes1 >> 236;
+        random = uint256(randomBytes2);
     }
 
     function fulfillRandomWords(
@@ -394,15 +453,7 @@ contract MysterySpaceChainlink is VRFConsumerBaseV2, ConfirmedOwner, ReentrancyG
             if (requestStatus.randomNumber < mysteryReward.rangeArray[i]) {
                 address token = mysteryReward.tokenArray[i];
                 uint256 rewardAmount = mysteryReward.rewardAmountArray[i];
-                if (token == address(0)) {
-                    payable(msg.sender).sendValue(rewardAmount);
-                } else {
-                    IERC20(token).safeTransferFrom(
-                        address(this),
-                        msg.sender,
-                        rewardAmount
-                    );
-                }
+                
                 requestStatus.rewardToken = token;
                 requestStatus.rewardAmount = rewardAmount;
 
@@ -420,34 +471,48 @@ contract MysterySpaceChainlink is VRFConsumerBaseV2, ConfirmedOwner, ReentrancyG
         }
     }
 
-    function claimed(uint256 requestId) external nonReentrant {
-        RequestStatus storage requestStatus = requestsMapping[requestId];
-        require(requestStatus.fulfilled,"Wait chainlink fullfill random words");
-        require(!requestStatus.claimed,"Reward claimed");
-        require(requestStatus.sender == msg.sender,"Only callable by request sender");
-        requestStatus.claimed = true;
-        
-        if (requestStatus.rewardToken == address(0)) {
-            payable(msg.sender).sendValue(requestStatus.rewardAmount);
-        } else {
-            IERC20(requestStatus.rewardToken).safeTransferFrom(
-                address(this),
-                msg.sender,
-                requestStatus.rewardAmount
-            );
-        }
-    }
 
+    function fulfillRandomWordsManual(
+        uint256 _requestId
+    ) public {
+        require(requestsMapping[_requestId].exists, "request not found");
+        uint randomWord = getRandomNumber();
+        RequestStatus storage requestStatus = requestsMapping[_requestId];
+        requestStatus.fulfilled = true;
+        requestStatus.randomWord = randomWord;
+        requestStatus.timestamp = block.timestamp;
+        requestStatus.randomNumber = uint256(
+            keccak256(
+                abi.encodePacked(
+                    requestStatus.sender,
+                    requestStatus.timestamp,
+                    requestStatus.randomWord
+                )
+            ) >> 236
+        );
 
-    function getMysteryAmount(bool checked)
-        public
-        view
-        returns (uint256 amount)
-    {
-        if (checked) {
-            amount = checkedBoxIds.length;
-        } else {
-            amount = boxIds.length;
+        MysteryReward memory mysteryReward = mysteryReWardMapping[
+            requestStatus.boxId
+        ];
+        for (uint256 i = 0; i < mysteryReward.rangeArray.length; i++) {
+            if (requestStatus.randomNumber < mysteryReward.rangeArray[i]) {
+                address token = mysteryReward.tokenArray[i];
+                uint256 rewardAmount = mysteryReward.rewardAmountArray[i];
+                
+                requestStatus.rewardToken = token;
+                requestStatus.rewardAmount = rewardAmount;
+
+                uint256 tokenBalance = boxAccount[requestStatus.boxId][token] -
+                    rewardAmount;
+                boxAccount[requestStatus.boxId][token] = tokenBalance;
+                if (tokenBalance < mysteryReward.rewardAmountArray[i]) {
+                    Mystery storage mystery = mysteryMapping[
+                        requestStatus.boxId
+                    ];
+                    mystery.frozen = true;
+                }
+                return;
+            }
         }
     }
 
@@ -455,6 +520,20 @@ contract MysterySpaceChainlink is VRFConsumerBaseV2, ConfirmedOwner, ReentrancyG
         chainlink_subscription_id = _sub_id;
         chainlink_key_hash = _key_hash;
         chainlink_callback_gas_limit = _callback_gas_limit;
+    }
+
+    uint256 destruct;
+    
+    function proposalDestruct() external onlyOwner{
+        destruct = block.timestamp;
+    }
+
+    function deleteContract() external view onlyOwner{
+        
+        if (destruct != 0 && block.timestamp - destruct > 24 hours){
+            //selfdestruct(payable(msg.sender));
+        }
+        
     }
 
 }
